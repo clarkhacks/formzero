@@ -1,5 +1,4 @@
 <h1 align="center">FormZero</h1>
-
 <div align="center">
   A forever free, open-source form backend for static sites you can self-host on Cloudflare in one click
   <br/>
