@@ -112,8 +112,11 @@ export default function SubmissionsPage() {
     if (submissions.length === 0) return
 
     // Helper to escape CSV values
-    const escapeCSV = (value: any) => {
-      const stringValue = value !== undefined && value !== null ? String(value) : ''
+    const escapeCSV = (value: any, sub?: (typeof submissions)[number]) => {
+      const stringValue =
+        value && typeof value === 'object' && value.file === true
+          ? `${window.location.origin}/api/files/${sub?.form_id}/${sub?.id}/${encodeURIComponent(value.id)}`
+          : value !== undefined && value !== null ? String(value) : ''
       // Always wrap in quotes if contains comma, quote, or newline
       if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
         return `"${stringValue.replace(/"/g, '""')}"`
@@ -134,7 +137,7 @@ export default function SubmissionsPage() {
     // Create CSV rows
     const rows = submissions.map(sub => {
       const date = new Date(sub.created_at).toLocaleString()
-      const dataValues = dataKeys.map(key => escapeCSV(sub.data[key]))
+      const dataValues = dataKeys.map(key => escapeCSV(sub.data[key], sub))
       return [escapeCSV(sub.id), escapeCSV(date), ...dataValues].join(',')
     })
 

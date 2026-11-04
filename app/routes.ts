@@ -21,6 +21,8 @@ export default [
   route("/api/auth/*", "routes/api.auth.$.tsx"),
   route("/api/forms/:formId/submissions", "routes/api.forms.$formId.submissions.tsx"),
 
+  route("/api/files/:formId/:submissionId/:fileId", "routes/api.files.$formId.$submissionId.$fileId.tsx"),
+
   route("/success", "routes/success.tsx"),
   route("/error", "routes/error.tsx"),
 ] satisfies RouteConfig;

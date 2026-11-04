@@ -15,5 +15,11 @@
 			"database_name": "formzero",
 			"database_id": "9f118a3d-a40e-4d16-885d-440faafdbd51",
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "UPLOADS",
+			"bucket_name": "formzero-uploads"
+		}
 	]
 }

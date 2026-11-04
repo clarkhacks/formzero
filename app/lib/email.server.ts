@@ -319,6 +319,10 @@ function formatValue(value: any): string {
       '</ul>'
   }
 
+  if (typeof value === 'object' && value.file === true) {
+    return `📎 ${escapeHtml(String(value.name))} (${Math.max(1, Math.round(value.size / 1024))} KB) — view in dashboard`
+  }
+
   if (typeof value === 'object') {
     return '<pre style="margin: 0; padding: 8px; background-color: #fafafa; border-radius: 6px; font-size: 13px; overflow-x: auto; color: #252525;">' +
       escapeHtml(JSON.stringify(value, null, 2)) +
@@ -356,6 +360,10 @@ function formatValueText(value: any): string {
       return '(Empty list)'
     }
     return '\n  - ' + value.map(item => String(item)).join('\n  - ')
+  }
+
+  if (typeof value === 'object' && value.file === true) {
+    return `${value.name} (${Math.max(1, Math.round(value.size / 1024))} KB) - view in dashboard`
   }
 
   if (typeof value === 'object') {

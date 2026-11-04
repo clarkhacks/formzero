@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "#/components/ui/dialog"
 import { Loader2 } from "lucide-react"
+import { deleteUploads } from "~/lib/uploads.server"
 import { requireAuth } from "~/lib/require-auth.server"
 
 export const meta: Route.MetaFunction = () => {
@@ -62,6 +63,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
           { status: 404 }
         )
       }
+
+      await deleteUploads(context.cloudflare.env.UPLOADS, `${formId}/`)
 
       return redirect("/forms")
     } catch (error) {

@@ -50,10 +50,11 @@ export default function IntegrationPage() {
     setTimeout(() => setCopiedCode(false), 2000)
   }
 
-  const htmlExample = `<form action="${htmlAction}" method="POST">
+  const htmlExample = `<form action="${htmlAction}" method="POST" enctype="multipart/form-data">
   <input type="text" name="name" placeholder="Your Name" required />
   <input type="email" name="email" placeholder="Your Email" required />
   <textarea name="message" placeholder="Your Message"></textarea>
+  <input type="file" name="attachment" />
   <button type="submit">Submit</button>
 </form>`
 

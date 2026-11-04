@@ -1,6 +1,7 @@
 import type { Route } from "./+types/forms.$formId.submissions.$submissionId"
 import { data } from "react-router"
 import { requireAuth } from "~/lib/require-auth.server"
+import { deleteUploads } from "~/lib/uploads.server"
 
 export async function action({ request, params, context }: Route.ActionArgs) {
   const database = context.cloudflare.env.DB
@@ -28,6 +29,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         { status: 404 }
       )
     }
+
+    await deleteUploads(context.cloudflare.env.UPLOADS, `${formId}/${submissionId}/`)
 
     return data({ success: true }, { status: 200 })
   } catch (error) {

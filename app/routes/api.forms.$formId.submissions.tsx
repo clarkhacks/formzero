@@ -2,6 +2,7 @@ import type { Route } from "./+types/api.forms.$formId.submissions";
 import { data, redirect } from "react-router";
 import { sendSubmissionNotification } from "~/lib/email.server";
 import type { EmailConfig } from "#/types/settings";
+import { extractUploads, deleteUploads, UploadError } from "~/lib/uploads.server";
 
 // CORS headers to allow submissions from any domain
 const corsHeaders = {
@@ -65,6 +66,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       contentType.includes("multipart/form-data")
     ) {
       const formData = await request.formData();
+      // Keep File values intact; extractUploads stores them in R2 below
       submissionData = Object.fromEntries(formData);
     } else {
       if (isJsonRequest) {
@@ -80,13 +82,26 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     const submissionId = crypto.randomUUID();
     const createdAt = Date.now();
 
+    // Move any files (multipart File or inline base64 objects) into R2
+    submissionData = await extractUploads(
+      context.cloudflare.env.UPLOADS,
+      formId,
+      submissionId,
+      submissionData
+    );
+
     // Store submission in database
-    await db
-      .prepare(
-        "INSERT INTO submissions (id, form_id, data, created_at) VALUES (?, ?, ?, ?)"
-      )
-      .bind(submissionId, formId, JSON.stringify(submissionData), createdAt)
-      .run();
+    try {
+      await db
+        .prepare(
+          "INSERT INTO submissions (id, form_id, data, created_at) VALUES (?, ?, ?, ?)"
+        )
+        .bind(submissionId, formId, JSON.stringify(submissionData), createdAt)
+        .run();
+    } catch (error) {
+      await deleteUploads(context.cloudflare.env.UPLOADS, `${formId}/${submissionId}/`);
+      throw error;
+    }
 
     // Send email notification asynchronously (don't await to avoid blocking response)
     // This runs in the background after the response is sent
@@ -168,6 +183,15 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       return redirect(redirectUrl, 303);
     }
   } catch (error) {
+    if (error instanceof UploadError) {
+      if (isJsonRequest) {
+        return data(
+          { success: false, error: error.message },
+          { status: error.status, headers: corsHeaders }
+        );
+      }
+      return redirect("/error?error=invalid_upload");
+    }
     console.error("Error processing form submission:", error);
 
     if (isJsonRequest) {

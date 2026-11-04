@@ -1,7 +1,7 @@
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useFetcher } from "react-router"
-import { ArrowUpDown, Trash2, Loader2 } from "lucide-react"
+import { ArrowUpDown, Trash2, Loader2, Paperclip } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "#/components/ui/button"
 import {
@@ -24,6 +24,21 @@ export type Submission = {
   form_id: string
   data: Record<string, any>
   created_at: number
+}
+
+function CellValue({ submission, value }: { submission: Submission; value: any }) {
+  if (value && typeof value === "object" && value.file === true) {
+    return (
+      <a
+        className="inline-flex items-center gap-1 text-sm underline"
+        href={`/api/files/${submission.form_id}/${submission.id}/${encodeURIComponent(value.id)}`}
+      >
+        <Paperclip className="h-3 w-3" />
+        {value.name}
+      </a>
+    )
+  }
+  return <div className="text-sm">{value?.toString() || ""}</div>
 }
 
 function DeleteSubmissionButton({ submission }: { submission: Submission }) {
@@ -161,7 +176,7 @@ export function createColumns(submissions: Submission[]): ColumnDef<Submission>[
         },
         cell: ({ row }) => {
           const value = row.original.data[fieldName]
-          return <div className="text-sm">{value?.toString() || ""}</div>
+          return <CellValue submission={row.original} value={value} />
         },
       }
     }
@@ -173,7 +188,7 @@ export function createColumns(submissions: Submission[]): ColumnDef<Submission>[
       header: fieldName.charAt(0).toUpperCase() + fieldName.slice(1),
       cell: ({ row }) => {
         const value = row.original.data[fieldName]
-        return <div className="text-sm">{value?.toString() || ""}</div>
+        return <CellValue submission={row.original} value={value} />
       },
     }
   })
