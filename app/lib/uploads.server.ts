@@ -3,6 +3,7 @@ export const MAX_FILES_PER_SUBMISSION = 5
 
 const ALLOWED_TYPES = [
   /^image\/(png|jpe?g|gif|webp|avif|heic|heif|bmp|tiff)$/,
+  /^image\/svg\+xml$/,
   /^application\/pdf$/,
   /^text\/plain$/,
 ]
@@ -110,10 +111,17 @@ export async function extractUploads(
       continue
     }
 
-    const detected = sniffType(new Uint8Array(body instanceof Uint8Array ? body : body.slice(0, 16)).subarray(0, 16))
-    // Binary formats must match their bytes; only plain text relies on the declared type
-    if (detected) type = detected
-    else if (type !== "text/plain") type = ""
+    const head = new Uint8Array(body instanceof Uint8Array ? body : body.slice(0, 1024)).subarray(0, 1024)
+    const detected = sniffType(head)
+    if (detected) {
+      type = detected
+    } else if (type === "image/svg+xml" || /\.svg$/i.test(name)) {
+      // SVG is text, so check the content actually looks like SVG
+      type = /<svg[\s>]/i.test(new TextDecoder().decode(head)) ? "image/svg+xml" : ""
+    } else if (type !== "text/plain") {
+      // Binary formats must match their bytes; only plain text relies on the declared type
+      type = ""
+    }
 
     if (!ALLOWED_TYPES.some(pattern => pattern.test(type))) {
       throw new UploadError(`"${field}": file type not allowed (${type || "unknown"})`, 415)
