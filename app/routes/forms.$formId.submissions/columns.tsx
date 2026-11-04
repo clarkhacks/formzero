@@ -27,15 +27,50 @@ export type Submission = {
 }
 
 function CellValue({ submission, value }: { submission: Submission; value: any }) {
+  const [open, setOpen] = useState(false)
+
   if (value && typeof value === "object" && value.file === true) {
+    const url = `/api/files/${submission.form_id}/${submission.id}/${encodeURIComponent(value.id)}`
+    const isImage = /^image\/(png|jpe?g|gif|webp)$/.test(value.type)
+
+    if (!isImage) {
+      return (
+        <a className="inline-flex items-center gap-1 text-sm underline" href={url} download={value.name}>
+          <Paperclip className="h-3 w-3" />
+          {value.name}
+        </a>
+      )
+    }
+
     return (
-      <a
-        className="inline-flex items-center gap-1 text-sm underline"
-        href={`/api/files/${submission.form_id}/${submission.id}/${encodeURIComponent(value.id)}`}
-      >
-        <Paperclip className="h-3 w-3" />
-        {value.name}
-      </a>
+      <>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-sm underline"
+          onClick={() => setOpen(true)}
+        >
+          <Paperclip className="h-3 w-3" />
+          {value.name}
+        </button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="truncate">{value.name}</DialogTitle>
+              <DialogDescription>{Math.max(1, Math.round(value.size / 1024))} KB</DialogDescription>
+            </DialogHeader>
+            <img
+              src={`${url}?inline=1`}
+              alt={value.name}
+              className="max-h-[70vh] w-full rounded-md object-contain"
+            />
+            <DialogFooter>
+              <Button asChild variant="outline">
+                <a href={url} download={value.name}>Download</a>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     )
   }
   return <div className="text-sm">{value?.toString() || ""}</div>
