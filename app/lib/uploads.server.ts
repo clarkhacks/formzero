@@ -1,7 +1,31 @@
 export const MAX_FILE_BYTES = 10 * 1024 * 1024
 export const MAX_FILES_PER_SUBMISSION = 5
 
-const ALLOWED_TYPES = [/^image\/(png|jpe?g|gif|webp|heic|heif)$/, /^application\/pdf$/, /^text\/plain$/]
+const ALLOWED_TYPES = [
+  /^image\/(png|jpe?g|gif|webp|avif|heic|heif|bmp|tiff)$/,
+  /^application\/pdf$/,
+  /^text\/plain$/,
+]
+
+const ascii = (bytes: Uint8Array, start: number, end: number) =>
+  String.fromCharCode(...bytes.slice(start, end))
+
+// Browsers often report an empty or odd type (HEIC, AVIF, screenshots), so trust the bytes first
+function sniffType(bytes: Uint8Array): string | null {
+  if (bytes.length >= 8 && bytes[0] === 0x89 && ascii(bytes, 1, 4) === "PNG") return "image/png"
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg"
+  if (ascii(bytes, 0, 4) === "GIF8") return "image/gif"
+  if (ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 12) === "WEBP") return "image/webp"
+  if (ascii(bytes, 0, 5) === "%PDF-") return "application/pdf"
+  if (ascii(bytes, 0, 2) === "BM") return "image/bmp"
+  if (ascii(bytes, 0, 4) === "II*\0" || ascii(bytes, 0, 4) === "MM\0*") return "image/tiff"
+  if (ascii(bytes, 4, 8) === "ftyp") {
+    const brand = ascii(bytes, 8, 12)
+    if (brand === "avif" || brand === "avis") return "image/avif"
+    if (/^(heic|heix|hevc|hevx|heim|heis|mif1|msf1)$/.test(brand)) return "image/heic"
+  }
+  return null
+}
 
 export type StoredFile = {
   file: true
@@ -86,8 +110,13 @@ export async function extractUploads(
       continue
     }
 
+    const detected = sniffType(new Uint8Array(body instanceof Uint8Array ? body : body.slice(0, 16)).subarray(0, 16))
+    // Binary formats must match their bytes; only plain text relies on the declared type
+    if (detected) type = detected
+    else if (type !== "text/plain") type = ""
+
     if (!ALLOWED_TYPES.some(pattern => pattern.test(type))) {
-      throw new UploadError(`"${field}": file type not allowed`, 415)
+      throw new UploadError(`"${field}": file type not allowed (${type || "unknown"})`, 415)
     }
     if (!bucket) throw new UploadError("File uploads are not configured", 503)
     if (pending.length >= MAX_FILES_PER_SUBMISSION) throw new UploadError("Too many files")
